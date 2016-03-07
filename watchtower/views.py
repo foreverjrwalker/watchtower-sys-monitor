@@ -12,6 +12,10 @@ from string import Template
 SQL_TEMPLATE = Template("""SELECT $search_columns
 FROM sys_info;""")
 
+SQL_TEMPLATE_WHERE = Template("""SELECT $search_columns
+FROM sys_info
+WHERE $criteria;""")
+
 # Rest command dictionary for lookup
 rest_dict = {'all': "*",
              'cpuinfo': "cpunum, cpuutilization",
@@ -60,42 +64,51 @@ class WatchtowerView(View):
 
         # List comprehension for enumerating values in the query string
         a = (param.split("=") for param in query_string.split('&'))
-        sql = ""
+
+        column_sql = ""
+        criteria = ""
+
         first_iter = True
         for key, value in a:
             if rest_dict.has_key(key.lower()):
                 # Handle daterange as a special case
                 if (key == "daterange"):
-                    raise NotImplemented
-
+                    # Assumes times are in the format "start-stop" in milliseconds
+                    times = value.split('-')
+                    criteria = "Timestamp BETWEEN %s AND %s" % (times[0], times[1])
                 # Stop searching through query string if all is encountered
                 elif(key == "all"):
-                    sql = "*"
+                    column_sql = "*"
                     break
                 else:
                     if first_iter:
-                        sql += rest_dict[key]
+                        column_sql += rest_dict[key]
                         first_iter = False
                     else:
-                        sql += "," + rest_dict[key]
-
+                        column_sql += "," + rest_dict[key]
         result = ""
-        if sql:
-             result = self.query_database(sql, None)
-        return ("Query:[%s] Result: %s" % (sql,str(result)) , 200)
+        if column_sql:
+            result = self.query_database(column_sql, criteria)
+        return ("Query:[%s] Result: %s" % (column_sql, str(result)), 200)
 
-    def convert_to_json(self, value_string):
-        pass
+    def convert_to_json(self, search_columns, results):
+        json_string = ""
+        if(search_columns == "*"):
+            pass
+        else:
+            for row in results:
+                pass
 
-    def convert_date_to_milliseconds(self, d):
-        ''' This method will take in values from the get string (Year, Month Date,
-         Hour Minutes and return the appropriate time in milliseconds 
-         for comparison'''
-        pass
 
-    def query_database(self, query_string, return_format):
+
+    def query_database(self, search_columns, criteria=0):
         ''' performs the query on the database'''
         c = db_conn.cursor()
-        c.execute(SQL_TEMPLATE.substitute({"search_columns":query_string}))
-        result = c.fetchone()
-        return result
+        if criteria:
+            c.execute(SQL_TEMPLATE_WHERE.substitute({"search_columns": search_columns, "criteria":criteria}))
+            results = c.fetchall()
+        else:
+            c.execute(SQL_TEMPLATE.substitute({"search_columns":search_columns}))
+            results = c.fetchone()
+        # TODO - self.convert_to_json(search_columns, results)
+        return results
