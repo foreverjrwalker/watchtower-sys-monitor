@@ -1,0 +1,21 @@
+BEGIN TRANSACTION;
+CREATE TABLE `sys_info` (
+	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,
+	`TimeStamp`	TEXT,
+	`Hostname`	TEXT,
+	`KernelVersion`	TEXT,
+	`CpuNum`	TEXT,
+	`CpuUtilization`	TEXT,
+	`DiskFree`	TEXT,
+	`DiskPercent`	TEXT,
+	`DiskTotal`	TEXT,
+	`DiskUsed`	TEXT,
+	`NetBytesRecv`	TEXT,
+	`NetBytesSent`	TEXT,
+	`NetPacketsRecv`	TEXT,
+	`NetPacketsSent`	TEXT,
+	`RamAval`	TEXT,
+	`RamPercent`	TEXT,
+	`RamTotal`	TEXT
+);
+COMMIT;
