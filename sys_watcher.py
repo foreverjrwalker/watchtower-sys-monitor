@@ -32,7 +32,7 @@ NetBytesRecv,NetPacketsSent,NetPacketsRecv,
 CpuNum,CpuUtilization,DiskUsed,DiskPercent,
 DiskFree,DiskTotal)
 VALUES
-('$Timestamp','$Hostname','$KernelVersion','$RamTotal',
+($Timestamp,'$Hostname','$KernelVersion','$RamTotal',
 '$RamAval','$RamPercent','$NetBytesSent',
 '$NetBytesRecv','$NetPacketsSent','$NetPacketsRecv',
 '$CpuNum','$CpuUtilization','$DiskUsed','$DiskPercent',
@@ -93,7 +93,7 @@ def connect_to_database(file_location):
     c.execute("""
     CREATE TABLE if not exists `sys_info` (
     `id`    INTEGER PRIMARY KEY AUTOINCREMENT,
-    `TimeStamp`    TEXT,
+    `Timestamp`    NUMERIC,
     `Hostname`    TEXT,
     `KernelVersion`    TEXT,
     `CpuNum`    TEXT,
@@ -186,11 +186,16 @@ def calculate_network_speed(data_queue):
         data_queue.append((upload, download))
         start_time = time()
 
-def get_network_throughput(num):
+def get_network_throughput(tx=1):
+    ''' The queue is holding tuples of Rx and Tx averages, 
+    0 is for Tx, 1 is for Rx'''
+     
     output = 0
     try:
-        if (num == 1 or num == 0):
-            output = current_network_throughput[-1][num]
+        if (tx):
+            output = current_network_throughput[-1][1]
+        else: # Case is Rx
+            output = current_network_throughput[-1][0]
     except:
         output = 0
     return int(round(output))
