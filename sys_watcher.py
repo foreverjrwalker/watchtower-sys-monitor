@@ -21,13 +21,25 @@ from time import sleep
 from time import time
 
 import psutil as PS
+from string import Template
 
 EXECUTING = 0
 UPDATE_RATE = 1
+SQL_TEMPLATE = Template("""INSERT INTO sys_info 
+(Timestamp,Hostname,KernelVersion,RamTotal,
+RamAval,RamPercent,NetBytesSent,
+NetBytesRecv,NetPacketsSent,NetPacketsRecv,
+CpuNum,CpuUtilization,DiskUsed,DiskPercent,
+DiskFree,DiskTotal)
+VALUES
+('$Timestamp','$Hostname','$KernelVersion','$RamTotal',
+'$RamAval','$RamPercent','$NetBytesSent',
+'$NetBytesRecv','$NetPacketsSent','$NetPacketsRecv',
+'$CpuNum','$CpuUtilization','$DiskUsed','$DiskPercent',
+'$DiskFree','$DiskTotal');""")
 
 # Main program
 current_network_throughput = deque(maxlen=1)
-VERBOSE = 1
 
 def exit_cleanly(message=""):
     curframe = inspect.currentframe()
@@ -49,7 +61,7 @@ def start_monitoring():
     # Start the Network Thread
     start_network_thread()
     # Connect to database
-    conn = connect_to_database("sysinfo.db.sqlite3")
+    conn = connect_to_database("data/sysinfo.db.sqlite3")
 
     while (EXECUTING):
         # Update the message
@@ -76,7 +88,7 @@ def writeout(message, error=False):
 def connect_to_database(file_location):
     # Connecting to the Database File
     writeout("Creating Database: %s" % file_location)
-    conn = sqlite3.connect('file_location')
+    conn = sqlite3.connect(file_location)
     c = conn.cursor()
     c.execute("""
     CREATE TABLE if not exists `sys_info` (
@@ -105,7 +117,7 @@ def get_kernel_version():
     message = ""
     if _platform == "linux" or _platform == "linux2":
             message = subprocess.check_output(['uname', '-rs']).strip()
-    return message.strip();
+    return message.strip()
 
 def get_hostname():
     message = ""
@@ -120,7 +132,7 @@ def retrieve_current_system_state():
     dd = {}
 
     # System Stats
-    dd['Timestamp'] = get_timestamp()
+    dd['Timestamp'] = time()
     dd['Hostname'] = get_hostname()
     dd["KernelVersion"] = get_kernel_version()
 
@@ -155,10 +167,10 @@ def retrieve_current_system_state():
 
 def update_database(values_dict, conn):
     c = conn.cursor()
-    sql = "INSERT INTO sys_info "
-    c.execute()
-    pass
-
+    sql = SQL_TEMPLATE.substitute(values_dict)
+    print(sql)
+    c.execute(sql)
+    conn.commit()
 
 def calculate_network_speed(data_queue):
     start_time = time()
@@ -185,28 +197,23 @@ def get_network_throughput(num):
 
 
 def main(argv=None):
-        global VERBOSE
         global EXECUTING
         if argv is None:
             argv = sys.argv
         else:
             sys.argv.extend(argv)
         try:
-            VERBOSE = True
             writeout("######################################")
             writeout("         sys_watcher     ")
             writeout("######################################")
-            if VERBOSE > 0:
-                writeout("Verbose mode on")
             # Launch Monitoring Services
-            if VERBOSE > 0:
-                writeout("Launching Monitoring Services...")
+
+            writeout("Launching Monitoring Services...")
             EXECUTING = 1
             if not start_monitoring():
                 return writeout("StartServices (NTD) failed to start some service(s)")
             # Considerations - Error handling/Correction/Restart
-            if VERBOSE > 0:
-                writeout("Exiting...")
+            writeout("Exiting...")
             return exit_cleanly("Program Complete!")
 
         except KeyboardInterrupt:
